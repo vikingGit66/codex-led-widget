@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, screen } = require("electron");
 const path = require("node:path");
-const { getQuota } = require("./quota-service");
+const { getQuota, resolveCodexPath } = require("./quota-service");
 
 let mainWindow;
 let tray;
@@ -8,10 +8,10 @@ let isAlwaysOnTop = true;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 390,
-    height: 236,
-    minWidth: 390,
-    minHeight: 236,
+    width: 660,
+    height: 460,
+    minWidth: 660,
+    minHeight: 460,
     frame: false,
     transparent: true,
     resizable: false,
@@ -102,7 +102,7 @@ app.whenReady().then(() => {
   ipcMain.handle("window:alwaysOnTop:get", () => isAlwaysOnTop);
   ipcMain.handle("window:alwaysOnTop:set", (_event, value) => setAlwaysOnTop(value));
   ipcMain.handle("external:openCodex", () => {
-    shell.openPath(path.join(process.env.LOCALAPPDATA || "", "OpenAI", "Codex", "bin", "codex.exe"));
+    shell.openPath(resolveCodexPath());
   });
 
   app.on("activate", () => {

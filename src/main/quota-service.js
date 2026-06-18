@@ -8,7 +8,9 @@ function resolveCodexPath() {
   const localAppData = process.env.LOCALAPPDATA || "";
   const candidates = [
     process.env.CODEX_CLI_PATH,
-    path.join(localAppData, "OpenAI", "Codex", "bin", "codex.exe")
+    path.join(localAppData, "OpenAI", "Codex", "bin", "codex.exe"),
+    ...findLocalCodexBinaries(localAppData),
+    ...findPathCodexBinaries()
   ].filter(Boolean);
 
   for (const candidate of candidates) {
@@ -16,6 +18,53 @@ function resolveCodexPath() {
   }
 
   return "codex";
+}
+
+function findLocalCodexBinaries(localAppData) {
+  const binDir = path.join(localAppData || "", "OpenAI", "Codex", "bin");
+  if (!binDir || !fs.existsSync(binDir)) return [];
+
+  try {
+    return fs
+      .readdirSync(binDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(binDir, entry.name, "codex.exe"))
+      .filter((candidate) => fs.existsSync(candidate))
+      .sort((left, right) => getMtimeMs(right) - getMtimeMs(left));
+  } catch {
+    return [];
+  }
+}
+
+function findPathCodexBinaries() {
+  const pathValue = process.env.PATH || "";
+  const pathExts = process.platform === "win32" ? [".exe", ".cmd", ".bat", ""] : [""];
+  const candidates = [];
+
+  for (const directory of pathValue.split(path.delimiter)) {
+    if (!directory) continue;
+    for (const extension of pathExts) {
+      const candidate = path.join(directory, `codex${extension}`);
+      if (!fs.existsSync(candidate)) continue;
+      if (isWindowsAppsPackagePath(candidate)) continue;
+      candidates.push(candidate);
+    }
+  }
+
+  return candidates;
+}
+
+function isWindowsAppsPackagePath(candidate) {
+  const normalized = candidate.toLowerCase();
+  return normalized.includes(`${path.sep.toLowerCase()}windowsapps${path.sep.toLowerCase()}openai.codex_`);
+}
+
+function getMtimeMs(candidate) {
+  try {
+    return fs.statSync(candidate).mtimeMs;
+  } catch {
+    return 0;
+  }
 }
 
 async function getQuota() {
@@ -179,4 +228,4 @@ function handleMessage(line, pending) {
   }
 }
 
-module.exports = { getQuota, normalizeSnapshot };
+module.exports = { getQuota, normalizeSnapshot, resolveCodexPath };
