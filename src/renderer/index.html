@@ -6,20 +6,23 @@
     <title>Codex LED Widget</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body data-state="loading">
+  <body data-state="loading" data-risk="safe">
     <main class="widget">
-      <div class="ambient ambient-a"></div>
-      <div class="ambient ambient-b"></div>
+      <div class="scanline" aria-hidden="true"></div>
+      <div class="glow glow-cyan" aria-hidden="true"></div>
+      <div class="glow glow-red" aria-hidden="true"></div>
 
       <header class="titlebar">
         <div class="brand">
           <span id="trafficLight" class="traffic-light loading" aria-hidden="true"></span>
-          <div>
-            <span id="brandName" class="brand-name">Codex 额度</span>
-            <span id="stateText" class="brand-state">读取中</span>
+          <div class="brand-copy">
+            <span id="brandName" class="brand-name">Codex 额度监控</span>
+            <span id="stateText" class="brand-state">正在读取本机额度</span>
           </div>
         </div>
+
         <div class="window-actions">
+          <span id="healthPill" class="health-pill">同步中</span>
           <button id="langBtn" class="text-button" title="Language" aria-label="Language">EN</button>
           <button id="pinBtn" class="icon-button active" title="取消置顶" aria-label="取消置顶">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -44,39 +47,128 @@
         </div>
       </header>
 
-      <section class="content">
-        <div id="liquidMeter" class="liquid-meter" aria-label="Codex 剩余额度">
-          <div class="glass-rim"></div>
-          <div id="liquidFill" class="liquid-fill">
-            <div class="wave wave-one"></div>
-            <div class="wave wave-two"></div>
+      <section class="dashboard">
+        <section class="hero-panel" aria-label="总体额度">
+          <div id="liquidMeter" class="liquid-meter" aria-label="Codex 剩余额度">
+            <div class="meter-grid" aria-hidden="true"></div>
+            <div id="liquidFill" class="liquid-fill">
+              <div class="wave wave-one"></div>
+              <div class="wave wave-two"></div>
+            </div>
+            <div class="glass-rim"></div>
+            <div class="shine"></div>
+            <div class="meter-copy">
+              <strong id="remaining">--%</strong>
+              <span id="remainingLabel">剩余额度</span>
+            </div>
           </div>
-          <div class="shine"></div>
-          <div class="meter-copy">
-            <strong id="remaining">--%</strong>
-            <span id="remainingLabel">剩余</span>
-          </div>
-        </div>
 
-        <div class="quota-panel">
+          <div class="hero-meta">
+            <div>
+              <span id="currentUpdateLabel" class="meta-label">本次更新</span>
+              <strong id="currentUpdateText" class="meta-value">--</strong>
+            </div>
+            <div>
+              <span id="nextResetLabel" class="meta-label">下次重置</span>
+              <strong id="nextResetText" class="meta-value">--</strong>
+            </div>
+            <div>
+              <span id="planLabel" class="meta-label">计划</span>
+              <strong id="planText" class="meta-value">--</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="info-panel" aria-label="额度详情">
           <div class="quota-card primary">
-            <span id="primaryLabel">5小时窗口</span>
-            <strong id="primaryText">--</strong>
+            <div class="card-head">
+              <span id="primaryLabel">5小时窗口</span>
+              <strong id="primaryRemaining">--</strong>
+            </div>
+            <div class="progress-track">
+              <span id="primaryBar" class="progress-bar"></span>
+            </div>
+            <div class="card-grid">
+              <div>
+                <span id="primaryUsedLabel">已用</span>
+                <strong id="primaryUsed">--</strong>
+              </div>
+              <div>
+                <span id="primaryResetLabel">重置时间</span>
+                <strong id="primaryReset">--</strong>
+              </div>
+            </div>
           </div>
+
           <div class="quota-card">
-            <span id="secondaryLabel">7天窗口</span>
-            <strong id="secondaryText">--</strong>
+            <div class="card-head">
+              <span id="secondaryLabel">7天窗口</span>
+              <strong id="secondaryRemaining">--</strong>
+            </div>
+            <div class="progress-track">
+              <span id="secondaryBar" class="progress-bar"></span>
+            </div>
+            <div class="card-grid">
+              <div>
+                <span id="secondaryUsedLabel">已用</span>
+                <strong id="secondaryUsed">--</strong>
+              </div>
+              <div>
+                <span id="secondaryResetLabel">重置时间</span>
+                <strong id="secondaryReset">--</strong>
+              </div>
+            </div>
           </div>
-          <div class="quota-card slim">
-            <span id="planLabel">计划</span>
-            <strong id="planText">--</strong>
+
+          <div id="dailyRiskCard" class="pace-card">
+            <div class="pace-head">
+              <div>
+                <span id="paceLabel">7天额度节奏</span>
+                <strong id="dailyStatus">等待数据</strong>
+              </div>
+              <div class="reset-countdown">
+                <span id="secondaryCountdownLabel">重置倒计时</span>
+                <strong id="secondaryCountdown">--</strong>
+              </div>
+            </div>
+            <div class="pace-rows">
+              <div class="pace-row">
+                <div class="pace-row-meta">
+                  <span id="quotaUsedPaceLabel">额度已用</span>
+                  <strong id="quotaUsedPace">--</strong>
+                </div>
+                <div class="pace-track">
+                  <span id="quotaUsedPaceBar" class="pace-bar quota"></span>
+                </div>
+              </div>
+              <div class="pace-row">
+                <div class="pace-row-meta">
+                  <span id="timePassedPaceLabel">时间已过</span>
+                  <strong id="timePassedPace">--</strong>
+                </div>
+                <div class="pace-track">
+                  <span id="timePassedPaceBar" class="pace-bar time"></span>
+                </div>
+              </div>
+              <div class="pace-row">
+                <div class="pace-row-meta">
+                  <span id="paceLimitLabel">安全上限</span>
+                  <strong id="paceLimit">--</strong>
+                </div>
+                <div class="pace-track">
+                  <span id="paceLimitBar" class="pace-bar limit"></span>
+                </div>
+              </div>
+            </div>
+            <p id="dailyHint">超过安全上限会提示放慢节奏</p>
           </div>
-        </div>
+        </section>
       </section>
 
       <footer class="status">
         <span id="statusDot" class="status-dot loading"></span>
         <span id="statusText">正在读取 Codex 额度...</span>
+        <span id="nextRefreshText" class="next-refresh">下次刷新 --</span>
       </footer>
     </main>
 

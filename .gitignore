@@ -1,5 +1,6 @@
 node_modules/
-dist/
+dist/*
+!dist/Codex-Quota-Widget-*-win-x64-unpacked.zip
 out/
 .env
 .env.*
