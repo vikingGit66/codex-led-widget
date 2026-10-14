@@ -10,7 +10,8 @@
     "dev": "electron .",
     "start": "electron .",
     "build": "set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-builder --win portable",
-    "build:dir": "set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-builder --dir"
+    "build:dir": "set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-builder --dir",
+    "build:lite": "dotnet publish native/CodexQuotaWidgetLite.csproj -c Release -r win-x64 --self-contained true -p:RuntimeFrameworkVersion=9.0.20 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=embedded -p:NuGetAudit=false -o dist/lite-standalone"
   },
   "build": {
     "appId": "cn.codex.quota.widget",

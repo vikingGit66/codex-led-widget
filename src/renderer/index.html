@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body data-state="loading" data-risk="safe">
-    <main class="widget">
+    <main id="widget" class="widget">
       <div class="scanline" aria-hidden="true"></div>
       <div class="glow glow-cyan" aria-hidden="true"></div>
       <div class="glow glow-red" aria-hidden="true"></div>
@@ -27,6 +27,11 @@
           <button id="pinBtn" class="icon-button active" title="取消置顶" aria-label="取消置顶">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M14 4l6 6-3 1-4 4v4l-2 2-2-6-6-2 2-2h4l4-4 1-3z" />
+            </svg>
+          </button>
+          <button id="fullscreenBtn" class="icon-button" title="全屏" aria-label="全屏" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5" />
             </svg>
           </button>
           <button id="refreshBtn" class="icon-button" title="刷新" aria-label="刷新">
@@ -81,26 +86,6 @@
 
         <section class="info-panel" aria-label="额度详情">
           <div class="quota-card primary">
-            <div class="card-head">
-              <span id="primaryLabel">5小时窗口</span>
-              <strong id="primaryRemaining">--</strong>
-            </div>
-            <div class="progress-track">
-              <span id="primaryBar" class="progress-bar"></span>
-            </div>
-            <div class="card-grid">
-              <div>
-                <span id="primaryUsedLabel">已用</span>
-                <strong id="primaryUsed">--</strong>
-              </div>
-              <div>
-                <span id="primaryResetLabel">重置时间</span>
-                <strong id="primaryReset">--</strong>
-              </div>
-            </div>
-          </div>
-
-          <div class="quota-card">
             <div class="card-head">
               <span id="secondaryLabel">7天窗口</span>
               <strong id="secondaryRemaining">--</strong>

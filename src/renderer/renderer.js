@@ -1,10 +1,13 @@
 const AUTO_REFRESH_MS = 60 * 1000;
+const WIDGET_WIDTH = 660;
+const WIDGET_HEIGHT = 460;
 const DAILY_ALERT_THRESHOLD = 20;
 
 const state = {
   language: localStorage.getItem("codexQuotaLanguage") || "zh",
   quota: null,
   alwaysOnTop: true,
+  fullScreen: false,
   loading: false,
   nextRefreshAt: null,
   refreshTimer: null
@@ -17,36 +20,41 @@ const i18n = {
     ready: "额度已同步",
     empty: "额度已用完",
     warning: "额度偏低",
-    dailyAlert: "7天节奏过快",
+    dailyAlert: "日预算已用尽",
+    dailyAlertOver: "已超日预算",
     error: "读取失败",
     sync: "同步中",
     healthy: "运行良好",
     caution: "注意节奏",
     alert: "红色警报",
     remaining: "剩余额度",
-    primary: "5小时窗口",
     secondary: "7天窗口",
     used: "已用",
     resetTime: "重置时间",
     currentUpdate: "本次更新",
     nextReset: "下次重置",
     plan: "计划",
-    paceTitle: "7天额度节奏",
+    paceTitle: "7天额度节奏 · 20%/天",
     resetCountdown: "重置倒计时",
     quotaUsedPace: "额度已用",
     timePassedPace: "时间已过",
-    paceLimit: "安全上限",
-    dailyStatusSafe: "节奏稳定",
-    dailyStatusWarn: "接近安全上限",
-    dailyStatusAlert: "已超过安全上限",
-    dailyHintSafe: "实际用量仍在时间节奏内",
-    dailyHintWarn: "建议放慢高强度调用",
-    dailyHintAlert: "实际用量已跑在时间前面",
+    paceLimit: "累计预算",
+    dailyStatusSafe: "节奏正常",
+    dailyStatusWarn: "接近日预算",
+    dailyStatusAlert: "日预算已用尽",
+    dailyStatusOver: "已超日预算",
+    budgetAvailable: "可用",
+    budgetOver: "超额",
+    dailyHintSafe: "已用额度未达到今日累计预算",
+    dailyHintWarn: "剩余日预算不足 5 个百分点",
+    dailyHintAlert: "已达到今日累计预算",
     refresh: "刷新",
     hide: "隐藏",
     exit: "退出",
     pinOn: "取消置顶",
     pinOff: "置顶",
+    fullscreenOn: "退出全屏",
+    fullscreenOff: "全屏（遮挡任务栏）",
     statusLoading: "正在读取 Codex 额度...",
     statusReady: "上次更新",
     nextRefresh: "下次刷新",
@@ -63,36 +71,41 @@ const i18n = {
     ready: "Quota synced",
     empty: "Quota exhausted",
     warning: "Quota is low",
-    dailyAlert: "7d pace is high",
+    dailyAlert: "Daily budget used",
+    dailyAlertOver: "Over daily budget",
     error: "Read failed",
     sync: "Syncing",
     healthy: "Healthy",
     caution: "Watch pace",
     alert: "Red alert",
     remaining: "Remaining",
-    primary: "5h window",
     secondary: "7d window",
     used: "Used",
     resetTime: "Reset time",
     currentUpdate: "Updated",
     nextReset: "Next reset",
     plan: "Plan",
-    paceTitle: "7d quota pace",
+    paceTitle: "7d quota pace · 20%/day",
     resetCountdown: "Reset countdown",
     quotaUsedPace: "Quota used",
     timePassedPace: "Time passed",
-    paceLimit: "Safe limit",
-    dailyStatusSafe: "Pace is stable",
-    dailyStatusWarn: "Near the safe limit",
-    dailyStatusAlert: "Above the safe limit",
-    dailyHintSafe: "Actual usage is within the time pace",
-    dailyHintWarn: "Consider slowing heavy requests",
-    dailyHintAlert: "Actual usage is ahead of schedule",
+    paceLimit: "Cumulative budget",
+    dailyStatusSafe: "On budget",
+    dailyStatusWarn: "Near daily budget",
+    dailyStatusAlert: "Daily budget used",
+    dailyStatusOver: "Over daily budget",
+    budgetAvailable: "Available",
+    budgetOver: "Over",
+    dailyHintSafe: "Usage is below today's cumulative budget",
+    dailyHintWarn: "Less than 5 percentage points of budget remain",
+    dailyHintAlert: "Today's cumulative budget has been reached",
     refresh: "Refresh",
     hide: "Hide",
     exit: "Quit",
     pinOn: "Unpin",
     pinOff: "Pin",
+    fullscreenOn: "Exit fullscreen",
+    fullscreenOff: "Fullscreen (cover taskbar)",
     statusLoading: "Reading Codex quota...",
     statusReady: "Updated",
     nextRefresh: "Next refresh",
@@ -109,12 +122,14 @@ const $ = (id) => document.getElementById(id);
 
 const elements = {
   body: document.body,
+  widget: $("widget"),
   trafficLight: $("trafficLight"),
   brandName: $("brandName"),
   stateText: $("stateText"),
   healthPill: $("healthPill"),
   langBtn: $("langBtn"),
   pinBtn: $("pinBtn"),
+  fullscreenBtn: $("fullscreenBtn"),
   refreshBtn: $("refreshBtn"),
   minimizeBtn: $("minimizeBtn"),
   closeBtn: $("closeBtn"),
@@ -127,13 +142,6 @@ const elements = {
   nextResetText: $("nextResetText"),
   planLabel: $("planLabel"),
   planText: $("planText"),
-  primaryLabel: $("primaryLabel"),
-  primaryRemaining: $("primaryRemaining"),
-  primaryBar: $("primaryBar"),
-  primaryUsedLabel: $("primaryUsedLabel"),
-  primaryUsed: $("primaryUsed"),
-  primaryResetLabel: $("primaryResetLabel"),
-  primaryReset: $("primaryReset"),
   secondaryLabel: $("secondaryLabel"),
   secondaryRemaining: $("secondaryRemaining"),
   secondaryBar: $("secondaryBar"),
@@ -185,7 +193,7 @@ function setVisualState(visualState, riskState = "safe") {
   }
 }
 
-function visualStateForPrimaryRemaining(percent) {
+function visualStateForWeeklyRemaining(percent) {
   if (percent === null || percent === undefined || Number.isNaN(percent)) return "error";
   if (percent < 20) return "empty";
   if (percent < 35) return "warn";
@@ -207,6 +215,10 @@ function setPercent(percent) {
 function formatPercent(value) {
   const percent = clampPercent(value);
   return percent === null ? "--%" : `${percent}%`;
+}
+
+function formatBudgetBalance(value) {
+  return Number.isFinite(value) ? (Math.round(Math.abs(value) * 10) / 10) + "%" : "--%";
 }
 
 function formatDateTime(value) {
@@ -255,17 +267,22 @@ function formatDurationUntil(value) {
   return `${minutes}m`;
 }
 
-function getNextReset(quota) {
-  const dates = [quota?.primary?.resetsAt, quota?.secondary?.resetsAt]
-    .map((value) => (value ? new Date(value) : null))
-    .filter((date) => date && !Number.isNaN(date.getTime()) && date.getTime() > Date.now())
-    .sort((left, right) => left.getTime() - right.getTime());
+function getWeeklyWindow(quota) {
+  if (!quota) return null;
+  return [quota.weekly, quota.secondary, quota.primary].find(
+    (window) => Number(window?.windowDurationMins) >= 6 * 24 * 60
+  ) || (quota.secondary?.windowDurationMins == null ? quota.secondary : null);
+}
 
-  return dates[0] || null;
+function getNextReset(quota) {
+  const value = getWeeklyWindow(quota)?.resetsAt;
+  if (!value) return null;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && date.getTime() > Date.now() ? date : null;
 }
 
 function calculateWeeklyPace(quota) {
-  const source = quota?.secondary;
+  const source = getWeeklyWindow(quota);
   if (!source || !source.resetsAt || !source.windowDurationMins) {
     return null;
   }
@@ -280,27 +297,27 @@ function calculateWeeklyPace(quota) {
   const windowMs = Number(source.windowDurationMins) * 60 * 1000;
   const startAt = resetAt - windowMs;
   const elapsedMs = Math.max(0, Math.min(Date.now() - startAt, windowMs));
-  const elapsedDays = Math.max(elapsedMs / 86400000, 1 / 24);
+  const dayNumber = Math.min(7, Math.floor(elapsedMs / 86400000) + 1);
   const timePassedPercent = (elapsedMs / windowMs) * 100;
-  const safeLimitPercent = Math.min(100, elapsedDays * DAILY_ALERT_THRESHOLD);
+  const safeLimitPercent = Math.min(100, dayNumber * DAILY_ALERT_THRESHOLD);
   const usedPercent = Number(source.usedPercent || 0);
-  const dailyRate = Number(source.usedPercent || 0) / elapsedDays;
 
-  if (!Number.isFinite(dailyRate)) return null;
+  if (!Number.isFinite(usedPercent)) return null;
 
+  const budgetBalancePercent = safeLimitPercent - usedPercent;
   const risk =
-    dailyRate > DAILY_ALERT_THRESHOLD
+    budgetBalancePercent <= 0
       ? "alert"
-      : dailyRate >= DAILY_ALERT_THRESHOLD * 0.75
+      : budgetBalancePercent <= 5
         ? "warn"
         : "safe";
 
   return {
     risk,
-    dailyRate,
     usedPercent,
     timePassedPercent,
     safeLimitPercent,
+    budgetBalancePercent,
     resetsAt: source.resetsAt
   };
 }
@@ -311,11 +328,8 @@ function renderCopy() {
   elements.currentUpdateLabel.textContent = t("currentUpdate");
   elements.nextResetLabel.textContent = t("nextReset");
   elements.planLabel.textContent = t("plan");
-  elements.primaryLabel.textContent = t("primary");
   elements.secondaryLabel.textContent = t("secondary");
-  elements.primaryUsedLabel.textContent = t("used");
   elements.secondaryUsedLabel.textContent = t("used");
-  elements.primaryResetLabel.textContent = t("resetTime");
   elements.secondaryResetLabel.textContent = t("resetTime");
   elements.paceLabel.textContent = t("paceTitle");
   elements.secondaryCountdownLabel.textContent = t("resetCountdown");
@@ -330,6 +344,7 @@ function renderCopy() {
   elements.closeBtn.title = t("exit");
   elements.closeBtn.setAttribute("aria-label", t("exit"));
   renderPin();
+  renderFullScreen();
 }
 
 function renderPin() {
@@ -337,6 +352,23 @@ function renderPin() {
   elements.pinBtn.classList.toggle("active", state.alwaysOnTop);
   elements.pinBtn.title = label;
   elements.pinBtn.setAttribute("aria-label", label);
+}
+
+function updateWidgetScale() {
+  const scale = state.fullScreen
+    ? Math.max(0.1, Math.min(window.innerWidth / WIDGET_WIDTH, window.innerHeight / WIDGET_HEIGHT))
+    : 1;
+  elements.widget.style.setProperty("--widget-scale", String(scale));
+}
+
+function renderFullScreen() {
+  const label = state.fullScreen ? t("fullscreenOn") : t("fullscreenOff");
+  elements.fullscreenBtn.classList.toggle("active", state.fullScreen);
+  elements.fullscreenBtn.title = label;
+  elements.fullscreenBtn.setAttribute("aria-label", label);
+  elements.fullscreenBtn.setAttribute("aria-pressed", String(state.fullScreen));
+  elements.body.dataset.fullscreen = String(state.fullScreen);
+  updateWidgetScale();
 }
 
 function renderWindow(prefix, windowInfo) {
@@ -384,12 +416,12 @@ function renderWeeklyPace(pace) {
   elements.timePassedPaceBar.style.width = `${clampPercent(pace.timePassedPercent) ?? 0}%`;
   elements.paceLimitBar.style.width = `${clampPercent(pace.safeLimitPercent) ?? 0}%`;
 
-  const hint = `${t("quotaUsedPace")} ${formatPercent(pace.usedPercent)} / ${t("paceLimit")} ${formatPercent(
-    pace.safeLimitPercent
-  )}`;
+  const overBudget = pace.budgetBalancePercent < 0;
+  const hint = t(overBudget ? "budgetOver" : "budgetAvailable") + " " +
+    formatBudgetBalance(pace.budgetBalancePercent);
 
   if (risk === "alert") {
-    elements.dailyStatus.textContent = t("dailyStatusAlert");
+    elements.dailyStatus.textContent = t(overBudget ? "dailyStatusOver" : "dailyStatusAlert");
     elements.dailyHint.textContent = hint;
     return;
   }
@@ -420,7 +452,6 @@ function renderQuota() {
   if (!quota) {
     setVisualState("error");
     setPercent(null);
-    renderWindow("primary", null);
     renderWindow("secondary", null);
     renderWeeklyPace(null);
     elements.healthPill.textContent = t("error");
@@ -434,13 +465,13 @@ function renderQuota() {
   }
 
   const pace = calculateWeeklyPace(quota);
-  const percent = quota.primary?.remainingPercent ?? quota.remainingPercent;
-  const visualState = visualStateForPrimaryRemaining(percent);
+  const weekly = getWeeklyWindow(quota);
+  const percent = weekly?.remainingPercent ?? null;
+  const visualState = visualStateForWeeklyRemaining(percent);
 
   setVisualState(visualState, pace?.risk || "safe");
   setPercent(percent);
-  renderWindow("primary", quota.primary);
-  renderWindow("secondary", quota.secondary);
+  renderWindow("secondary", weekly);
   renderWeeklyPace(pace);
 
   const nextReset = getNextReset(quota);
@@ -448,12 +479,15 @@ function renderQuota() {
   elements.nextResetText.textContent = nextReset ? formatDateTime(nextReset.toISOString()) : "--";
   elements.planText.textContent = quota.planType || quota.limitName || t("unknown");
 
-  if (visualState === "empty") {
+  if (visualState === "error") {
+    elements.healthPill.textContent = t("error");
+    elements.stateText.textContent = t("statusNoData");
+  } else if (visualState === "empty") {
     elements.healthPill.textContent = t("alert");
     elements.stateText.textContent = t("empty");
   } else if (pace?.risk === "alert") {
     elements.healthPill.textContent = t("alert");
-    elements.stateText.textContent = t("dailyAlert");
+    elements.stateText.textContent = t(pace.budgetBalancePercent < 0 ? "dailyAlertOver" : "dailyAlert");
   } else if (visualState === "warn") {
     elements.healthPill.textContent = t("caution");
     elements.stateText.textContent = t("warning");
@@ -468,8 +502,9 @@ function renderQuota() {
 
 function renderNextRefresh() {
   elements.nextRefreshText.textContent = `${t("nextRefresh")} ${formatTime(state.nextRefreshAt)}`;
-  if (state.quota?.secondary?.resetsAt && elements.secondaryCountdown) {
-    elements.secondaryCountdown.textContent = formatDurationUntil(state.quota.secondary.resetsAt);
+  const weeklyReset = getWeeklyWindow(state.quota)?.resetsAt;
+  if (weeklyReset && elements.secondaryCountdown) {
+    elements.secondaryCountdown.textContent = formatDurationUntil(weeklyReset);
   }
 }
 
@@ -507,6 +542,7 @@ async function refreshQuota() {
 }
 
 async function init() {
+  window.addEventListener("resize", updateWidgetScale);
   renderCopy();
   setInterval(renderNextRefresh, 1000);
 
@@ -526,14 +562,41 @@ async function init() {
     renderPin();
   });
 
+  elements.fullscreenBtn.addEventListener("click", async () => {
+    state.fullScreen = await window.codexQuota.setFullScreen(!state.fullScreen);
+    localStorage.setItem("codexQuotaFullScreen", String(state.fullScreen));
+    renderFullScreen();
+  });
+
+  document.addEventListener("keydown", async (event) => {
+    if (event.key === "Escape" && state.fullScreen) {
+      state.fullScreen = await window.codexQuota.setFullScreen(false);
+      localStorage.setItem("codexQuotaFullScreen", "false");
+      renderFullScreen();
+    }
+  });
+
   elements.refreshBtn.addEventListener("click", refreshQuota);
   elements.minimizeBtn.addEventListener("click", () => window.codexQuota?.minimize());
   elements.closeBtn.addEventListener("click", () => window.codexQuota?.close());
   window.codexQuota?.onRefresh(refreshQuota);
+  window.codexQuota?.onFullScreenChanged((value) => {
+    state.fullScreen = value;
+    localStorage.setItem("codexQuotaFullScreen", String(value));
+    renderFullScreen();
+  });
   window.codexQuota?.onAlwaysOnTopChanged((value) => {
     state.alwaysOnTop = value;
     renderPin();
   });
+
+  if (window.codexQuota?.getFullScreen) {
+    state.fullScreen = await window.codexQuota.getFullScreen();
+    if (!state.fullScreen && localStorage.getItem("codexQuotaFullScreen") === "true") {
+      state.fullScreen = await window.codexQuota.setFullScreen(true);
+    }
+    renderFullScreen();
+  }
 
   refreshQuota();
 }

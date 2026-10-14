@@ -90,7 +90,10 @@ function firstSnapshot(map) {
 function normalizeSnapshot(snapshot) {
   const primary = normalizeWindow(snapshot.primary);
   const secondary = normalizeWindow(snapshot.secondary);
-  const activeWindow = primary || secondary;
+  const weekly =
+    [secondary, primary].find((window) => Number(window?.windowDurationMins) >= 6 * 24 * 60) ||
+    (secondary?.windowDurationMins == null ? secondary : null);
+  const activeWindow = weekly;
 
   return {
     limitId: snapshot.limitId || "codex",
@@ -100,6 +103,7 @@ function normalizeSnapshot(snapshot) {
     credits: snapshot.credits || null,
     primary,
     secondary,
+    weekly,
     remainingPercent: activeWindow ? activeWindow.remainingPercent : null,
     usedPercent: activeWindow ? activeWindow.usedPercent : null,
     resetsAt: activeWindow ? activeWindow.resetsAt : null,

@@ -41,10 +41,16 @@ body {
   place-items: center;
 }
 
+body[data-fullscreen="true"] {
+  background: rgba(3, 7, 12, 0.98);
+}
+
 .widget {
   position: relative;
   width: 660px;
   height: 460px;
+  transform: scale(var(--widget-scale, 1));
+  transform-origin: center center;
   overflow: hidden;
   border: 1px solid var(--line-strong);
   border-radius: 26px;
@@ -460,7 +466,8 @@ button:active {
 
 .info-panel {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
+  grid-template-rows: 142px 1fr;
   gap: 12px;
 }
 

@@ -9,3 +9,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+/native/bin/
+/native/obj/
+/tests/**/bin/
+/tests/**/obj/
