@@ -13,3 +13,4 @@ pnpm-debug.log*
 /native/obj/
 /tests/**/bin/
 /tests/**/obj/
+/dist/*.zip
